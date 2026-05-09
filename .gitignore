@@ -17,8 +17,8 @@ obj/
 .env
 .env.local
 .env.*.local
-appsettings.Development.json
 appsettings.Production.json
+appsettings.*.Local.json
 *.publishprofile
 *.pubxml.user
 
