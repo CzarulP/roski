@@ -1,0 +1,47 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+.pnpm-store/
+*.tsbuildinfo
+next-env.d.ts
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+appsettings.Development.json
+appsettings.Production.json
+*.publishprofile
+*.pubxml.user
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Build artifacts
+publish/
+dist/
+*.log
+
+# Postgres data volume
+.postgres-data/
+
+# Large 3D / GIS source files (we ship the .glb only)
+data/source/*
+!data/source/.gitkeep
+*.blend1
+*.tif
+*.tiff
+*.zip
