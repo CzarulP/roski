@@ -32,21 +32,24 @@ public static class ViewerEndpoints
 
             if (resort is null) return Results.NotFound();
 
-            var slopes = await db.Slopes.AsNoTracking()
+            // Materialize first — EF can't translate GeoToLocal into SQL.
+            var rawSlopes = await db.Slopes.AsNoTracking()
                 .Where(s => s.ResortId == resort.Id)
-                .Select(s => new ViewerSlopeDto(
-                    s.Id, s.Name, s.Difficulty, s.LengthM,
-                    GeoToLocal(s.Geometry.Coordinates, resort.TerrainOriginLat, resort.TerrainOriginLon),
-                    s.IsOpen))
                 .ToListAsync(ct);
 
-            var lifts = await db.Lifts.AsNoTracking()
+            var rawLifts = await db.Lifts.AsNoTracking()
                 .Where(l => l.ResortId == resort.Id)
-                .Select(l => new ViewerLiftDto(
-                    l.Id, l.Name, l.LiftType, l.Capacity, l.Hours,
-                    GeoToLocal(l.Geometry.Coordinates, resort.TerrainOriginLat, resort.TerrainOriginLon),
-                    l.IsOpen))
                 .ToListAsync(ct);
+
+            var slopes = rawSlopes.Select(s => new ViewerSlopeDto(
+                s.Id, s.Name, s.Difficulty, s.LengthM,
+                GeoToLocal(s.Geometry.Coordinates, resort.TerrainOriginLat, resort.TerrainOriginLon),
+                s.IsOpen)).ToList();
+
+            var lifts = rawLifts.Select(l => new ViewerLiftDto(
+                l.Id, l.Name, l.LiftType, l.Capacity, l.Hours,
+                GeoToLocal(l.Geometry.Coordinates, resort.TerrainOriginLat, resort.TerrainOriginLon),
+                l.IsOpen)).ToList();
 
             return Results.Ok(new ViewerDataDto(
                 resort.Slug,
