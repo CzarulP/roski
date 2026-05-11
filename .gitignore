@@ -38,6 +38,16 @@ dist/
 # Postgres data volume
 .postgres-data/
 
+# Local-only staging (wheel swaps, scratch)
+.tmp/
+
+# Python venv for the terrain-bake script
+.venv/
+data/source/sat/
+data/source/srtm/
+__pycache__/
+*.pyc
+
 # Large 3D / GIS source files (we ship the .glb only)
 data/source/*
 !data/source/.gitkeep
