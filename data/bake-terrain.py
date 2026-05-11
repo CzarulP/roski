@@ -272,6 +272,10 @@ def main() -> int:
     p.add_argument("--size", type=float, default=5000.0, help="bbox side length in metres (default 5000)")
     p.add_argument("--samples", type=int, default=200, help="mesh samples per side (default 200 -> ~80k tris)")
     p.add_argument("--zoom", type=int, default=15, help="satellite tile zoom level (default 15)")
+    p.add_argument("--max-texture-px", type=int, default=4096,
+                   help="cap final texture longest side (default 4096; higher = bigger file)")
+    p.add_argument("--jpeg-quality", type=int, default=88,
+                   help="JPEG quality for embedded texture, 0..100 (default 88)")
     p.add_argument("--out", required=True, help="output .glb path")
     args = p.parse_args()
 
@@ -302,10 +306,26 @@ def main() -> int:
     texture = crop_satellite_to_bbox(composite, tile_bbox, lat_min, lat_max, lon_min, lon_max, args.zoom)
     print(f"[sat] cropped texture {texture.size[0]}x{texture.size[1]} px")
 
+    # Downscale texture if it exceeds the max-texture-px cap (4K typical).
+    long_side = max(texture.size)
+    if long_side > args.max_texture_px:
+        scale = args.max_texture_px / long_side
+        new_size = (int(texture.size[0] * scale), int(texture.size[1] * scale))
+        texture = texture.resize(new_size, Image.Resampling.LANCZOS)
+        print(f"[sat] downscaled to {texture.size[0]}x{texture.size[1]} px")
+
+    # Re-encode as JPEG so trimesh embeds JPEG (not PNG) in the GLB.
+    # PNG bloats aerial imagery by ~10x — JPEG at quality 88 is visually identical.
+    buf = io.BytesIO()
+    texture.save(buf, format="JPEG", quality=args.jpeg_quality, optimize=True)
+    buf.seek(0)
+    texture_jpeg = Image.open(buf)
+    print(f"[sat] JPEG-encoded at quality {args.jpeg_quality} ({len(buf.getvalue()) / 1024 / 1024:.2f} MB)")
+
     # 4. Build trimesh with texture
     material = trimesh.visual.material.PBRMaterial(
         name=f"{args.slug}_terrain",
-        baseColorTexture=texture,
+        baseColorTexture=texture_jpeg,
         roughnessFactor=1.0,
         metallicFactor=0.0,
     )
