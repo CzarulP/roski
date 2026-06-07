@@ -23,7 +23,7 @@ type SnowProps = {
  * with a fresh XZ position so the loop is invisible.
  */
 export default function Snow({
-  count = 3000,
+  count = 1500,        // halved from 3000 — visually identical, half the CPU loop
   area = 3500,
   ceiling = 3000,
   floor = 600,

@@ -7,11 +7,16 @@ import { ArrowLeft } from "lucide-react";
 export default async function ViewerPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  let resort;
+  let resort, viewerData;
   try {
     resort = await endpoints.resort(slug);
   } catch {
     notFound();
+  }
+  try {
+    viewerData = await endpoints.viewerData(slug);
+  } catch {
+    viewerData = null;
   }
 
   return (
@@ -35,11 +40,11 @@ export default async function ViewerPage({ params }: { params: Promise<{ slug: s
       </div>
 
       {/* Full-bleed canvas */}
-      <ViewerCanvas terrainModelUrl={resort.terrainModelUrl} />
+      <ViewerCanvas terrainModelUrl={resort.terrainModelUrl} viewerData={viewerData} />
 
-      {/* Phase note (will be removed in 2f) */}
+      {/* Phase note (will be removed when we ship) */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 text-xs text-muted-foreground bg-card/80 backdrop-blur border border-border rounded-full px-4 py-2">
-        Faza 2d — modelul real al Strajei (SRTM 30 m + imagini satelit ESRI).
+        Faza 3 — pârtii și telecabine reale din OpenStreetMap, drapate pe SRTM.
       </div>
     </div>
   );

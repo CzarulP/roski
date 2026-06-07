@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import type { ViewerData } from "@/lib/api";
 
 // Three.js needs `window`; lazy-load on the client only.
 const Scene = dynamic(() => import("./Scene"), {
@@ -14,8 +15,9 @@ const Scene = dynamic(() => import("./Scene"), {
 
 type ViewerCanvasProps = {
   terrainModelUrl?: string | null;
+  viewerData?: ViewerData | null;
 };
 
-export default function ViewerCanvas({ terrainModelUrl }: ViewerCanvasProps) {
-  return <Scene terrainModelUrl={terrainModelUrl} />;
+export default function ViewerCanvas({ terrainModelUrl, viewerData }: ViewerCanvasProps) {
+  return <Scene terrainModelUrl={terrainModelUrl} viewerData={viewerData} />;
 }
