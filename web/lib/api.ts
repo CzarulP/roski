@@ -79,9 +79,52 @@ export type ViewerData = {
   lifts: ViewerLift[];
 };
 
+export type SkipassPrice = {
+  label: string;
+  amount: number;
+  currency: string;
+};
+
+export type Skipass = {
+  type: "daily" | "4hour" | "points_montana" | "points_platoul" | string;
+  name: string;
+  valid: string;
+  scope: string;
+  prices: SkipassPrice[];
+  consumption?: Record<string, number>;
+};
+
+export type Accommodation = {
+  slug: string;
+  name: string;
+  url: string;
+  address: string | null;
+  description: string;
+  features: string[];
+  stars: number | null;
+};
+
+export type RentalShop = {
+  name: string;
+};
+
+export type ExternalData = {
+  source: string;
+  resort_slug: string;
+  skipass: {
+    passes: Skipass[];
+    deposit_lei: number;
+    source_url: string;
+    notes: string[];
+  };
+  accommodations: Accommodation[];
+  rentals: RentalShop[];
+};
+
 export const endpoints = {
   resorts: () => api<ResortSummary[]>("/api/v1/resorts/"),
   resort: (slug: string) => api<ResortDetail>(`/api/v1/resorts/${slug}`),
   weather: (slug: string) => api<Weather>(`/api/v1/resorts/${slug}/weather`),
   viewerData: (slug: string) => api<ViewerData>(`/api/v1/resorts/${slug}/viewer-data`),
+  external: (slug: string) => api<ExternalData>(`/api/v1/resorts/${slug}/external`),
 };
