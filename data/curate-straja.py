@@ -198,6 +198,18 @@ BABY_SKI_PATH: list[tuple[float, float]] = [
 ]
 
 
+# Pârtie intermediară — green connector slope from the end of Pârtia Canal (2)
+# across to the top station of Telescaun Platoul Soarelui (VI).
+# Used to ferry skiers between the two halves of the resort.
+PARTIE_INTERMEDIARA_PATH: list[tuple[float, float]] = [
+    (23.2477, 45.3136),   # near end of 2 Pârtia Canal
+    (23.2450, 45.3147),
+    (23.2422, 45.3156),
+    (23.2400, 45.3160),
+    (23.2378, 45.3164),   # top of Telescaun Platoul Soarelui
+]
+
+
 # -------- path utilities --------
 
 def densify(waypoints: list[tuple[float, float]], spacing_m: float = 120) -> list[tuple[float, float]]:
@@ -334,6 +346,8 @@ def main():
     add_slope("5a Pârtia Mutu", "medium", offset_parallel(MUTU_BASE_PATH, -28), length_m=1269, spacing_m=80, jiggle_seed=4, jiggle_amp=8)
     add_slope("5b Pârtia Mutu", "hard",   MUTU_BASE_PATH,                       length_m=1269, spacing_m=80, jiggle_seed=5, jiggle_amp=8)
     add_slope("5c Pârtia Mutu", "expert", offset_parallel(MUTU_BASE_PATH, +28), length_m=1269, spacing_m=80, jiggle_seed=6, jiggle_amp=8)
+    # Blue connector slope between Canal and Platoul Soarelui lift.
+    add_slope("Pârtie intermediară", "medium", PARTIE_INTERMEDIARA_PATH, length_m=836, spacing_m=80, jiggle_seed=7, jiggle_amp=12)
 
     # ---- lifts ----
     new_lifts = []
