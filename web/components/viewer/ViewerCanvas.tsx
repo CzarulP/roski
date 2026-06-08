@@ -2,6 +2,9 @@
 
 import dynamic from "next/dynamic";
 import type { ViewerData } from "@/lib/api";
+import InfoPanel from "./InfoPanel";
+import ResetButton from "./ResetButton";
+import Legend from "./Legend";
 
 // Three.js needs `window`; lazy-load on the client only.
 const Scene = dynamic(() => import("./Scene"), {
@@ -19,5 +22,12 @@ type ViewerCanvasProps = {
 };
 
 export default function ViewerCanvas({ terrainModelUrl, viewerData }: ViewerCanvasProps) {
-  return <Scene terrainModelUrl={terrainModelUrl} viewerData={viewerData} />;
+  return (
+    <>
+      <Scene terrainModelUrl={terrainModelUrl} viewerData={viewerData} />
+      <InfoPanel />
+      <Legend />
+      <ResetButton />
+    </>
+  );
 }
