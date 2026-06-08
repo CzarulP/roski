@@ -68,7 +68,7 @@ function LiftLine({
   }, [lift.points, yOffset]);
 
   const lineRef = useRef<Line2>(null);
-  const sphereRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const stationRefs = useRef<(THREE.Group | null)[]>([]);
   const startedAtRef = useRef<number | null>(null);
 
   // We want a single per-frame handler to drive cable + sphere animation +
@@ -81,15 +81,16 @@ function LiftLine({
     }
     const elapsed = clock.elapsedTime - startedAtRef.current - startDelay;
 
-    // ---- store-driven highlight state ----
+    // ---- store-driven highlight + filter state ----
     const state = useViewerStore.getState();
+    const filterOn = state.filters.lifts;
     const isHovered = state.hoveredId === lift.id;
     const isSelected =
       state.selection?.type === "lift" && state.selection.data.id === lift.id;
     const anyActive = state.hoveredId !== null || state.selection !== null;
     const isDimmed = anyActive && !isHovered && !isSelected;
 
-    const targetOpacity = isDimmed ? DIMMED_OPACITY : ACTIVE_OPACITY;
+    const targetOpacity = !filterOn ? 0 : isDimmed ? DIMMED_OPACITY : ACTIVE_OPACITY;
     const targetWidth = isHovered || isSelected ? HOVER_LINE_WIDTH : BASE_LINE_WIDTH;
 
     // ---- cable ----
@@ -120,14 +121,18 @@ function LiftLine({
       0.2
     );
 
-    for (const m of sphereRefs.current) {
-      if (!m) continue;
-      m.scale.setScalar(targetSphereScaleRef.current);
-      const mat = m.material as THREE.MeshStandardMaterial;
-      if (mat) {
-        mat.transparent = true;
-        mat.opacity = THREE.MathUtils.lerp(mat.opacity, targetOpacity, 0.18);
-      }
+    for (const g of stationRefs.current) {
+      if (!g) continue;
+      g.scale.setScalar(targetSphereScaleRef.current);
+      g.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const mat = child.material as THREE.MeshStandardMaterial;
+          if (mat) {
+            mat.transparent = true;
+            mat.opacity = THREE.MathUtils.lerp(mat.opacity, targetOpacity, 0.18);
+          }
+        }
+      });
     }
   });
 
@@ -163,10 +168,10 @@ function LiftLine({
         onClick={handleClick}
       />
       {stations.map((p, i) => (
-        <mesh
+        <group
           key={i}
-          ref={(m) => {
-            sphereRefs.current[i] = m;
+          ref={(g) => {
+            stationRefs.current[i] = g;
           }}
           position={p}
           scale={0}
@@ -174,9 +179,34 @@ function LiftLine({
           onPointerOut={handlePointerOut}
           onClick={handleClick}
         >
-          <sphereGeometry args={[7, 16, 16]} />
-          <meshStandardMaterial color="#f59e0b" />
-        </mesh>
+          {/* Pylon: a short dark vertical post anchoring the marker */}
+          <mesh position={[0, -8, 0]}>
+            <cylinderGeometry args={[1.6, 1.6, 16, 12]} />
+            <meshStandardMaterial color="#1f2733" roughness={0.6} metalness={0.4} />
+          </mesh>
+          {/* Glowing orb on top — the eye-catcher */}
+          <mesh position={[0, 4, 0]}>
+            <sphereGeometry args={[6, 20, 20]} />
+            <meshStandardMaterial
+              color="#fbbf24"
+              emissive="#f59e0b"
+              emissiveIntensity={0.9}
+              roughness={0.3}
+              metalness={0.1}
+            />
+          </mesh>
+          {/* Soft halo ring around the orb */}
+          <mesh position={[0, 4, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[10, 0.6, 8, 32]} />
+            <meshStandardMaterial
+              color="#fcd34d"
+              emissive="#f59e0b"
+              emissiveIntensity={0.4}
+              transparent
+              opacity={0.65}
+            />
+          </mesh>
+        </group>
       ))}
     </group>
   );

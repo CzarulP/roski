@@ -31,10 +31,11 @@ export default function Labels({ slopes, lifts, yOffset = 30 }: LabelsProps) {
   const uniqueSlopes = dedupByName(slopes);
   const uniqueLifts = dedupByName(lifts);
 
-  // Subscribing here means Labels re-renders on hover/select changes; children
-  // re-render with new isDimmed props. 28 cheap renders per hover, no useFrame.
+  // Subscribing here means Labels re-renders on hover/select/filter changes;
+  // children re-render with new isDimmed / isHidden props.
   const hoveredId = useViewerStore((s) => s.hoveredId);
   const selectionId = useViewerStore((s) => s.selection?.data.id ?? null);
+  const filters = useViewerStore((s) => s.filters);
   const anyActive = hoveredId !== null || selectionId !== null;
 
   const animationDelays = useMemo(() => {
@@ -63,6 +64,7 @@ export default function Labels({ slopes, lifts, yOffset = 30 }: LabelsProps) {
         const color = DIFFICULTY[s.difficulty]?.color ?? "#ffffff";
         const isActive = s.id === hoveredId || s.id === selectionId;
         const isDimmed = anyActive && !isActive;
+        const isHidden = !filters[s.difficulty as keyof typeof filters];
         return (
           <Html
             key={`s-${s.id}`}
@@ -90,7 +92,8 @@ export default function Labels({ slopes, lifts, yOffset = 30 }: LabelsProps) {
                 }}
                 className={cn(
                   "flex items-center gap-1.5 bg-zinc-900/85 hover:bg-zinc-800/95 text-zinc-100 text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap shadow border border-white/10 hover:border-white/30 cursor-pointer transition-all duration-200",
-                  isDimmed && "opacity-25"
+                  isDimmed && "opacity-25",
+                  isHidden && "opacity-0 pointer-events-none scale-50"
                 )}
               >
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
@@ -108,6 +111,7 @@ export default function Labels({ slopes, lifts, yOffset = 30 }: LabelsProps) {
         const liftOffset = yOffset + 35;
         const isActive = l.id === hoveredId || l.id === selectionId;
         const isDimmed = anyActive && !isActive;
+        const isHidden = !filters.lifts;
         return [
           { point: entry, key: `l-${l.id}-entry`, delay: liftEntryDelays[i] },
           { point: exit, key: `l-${l.id}-exit`, delay: liftExitDelays[i] },
@@ -138,7 +142,8 @@ export default function Labels({ slopes, lifts, yOffset = 30 }: LabelsProps) {
                 }}
                 className={cn(
                   "flex items-center gap-1.5 bg-zinc-900/85 hover:bg-zinc-800/95 text-amber-300 text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap shadow border border-amber-300/30 hover:border-amber-300/60 cursor-pointer transition-all duration-200",
-                  isDimmed && "opacity-25"
+                  isDimmed && "opacity-25",
+                  isHidden && "opacity-0 pointer-events-none scale-50"
                 )}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />

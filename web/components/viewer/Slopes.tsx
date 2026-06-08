@@ -87,15 +87,16 @@ function SlopeLine({
     material.dashSize = eased * totalLength + 0.001;
     material.gapSize = (1 - eased) * totalLength + 1;
 
-    // Hover/select state — read directly from store to avoid re-renders.
+    // Hover/select/filter state — read directly from store to avoid re-renders.
     const state = useViewerStore.getState();
+    const filterOn = state.filters[slope.difficulty as keyof typeof state.filters];
     const isHovered = state.hoveredId === slope.id;
     const isSelected =
       state.selection?.type === "slope" && state.selection.data.id === slope.id;
     const anyActive = state.hoveredId !== null || state.selection !== null;
     const isDimmed = anyActive && !isHovered && !isSelected;
 
-    const targetOpacity = isDimmed ? DIMMED_OPACITY : ACTIVE_OPACITY;
+    const targetOpacity = !filterOn ? 0 : isDimmed ? DIMMED_OPACITY : ACTIVE_OPACITY;
     const targetWidth = isHovered || isSelected ? HOVER_LINE_WIDTH : BASE_LINE_WIDTH;
 
     // Smooth lerp toward target
