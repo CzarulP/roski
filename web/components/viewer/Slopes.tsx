@@ -5,8 +5,10 @@ import { useFrame } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import type { Line2 } from "three-stdlib";
 import type { LineMaterial } from "three-stdlib";
+import * as THREE from "three";
 import type { ViewerSlope } from "@/lib/api";
 import { DIFFICULTY } from "@/lib/utils";
+import { useViewerStore } from "@/lib/viewer-store";
 
 type SlopesProps = {
   slopes: ViewerSlope[];
@@ -15,14 +17,19 @@ type SlopesProps = {
 };
 
 // Animation tuning
-const DRAW_DURATION_S = 1.8;   // how long each slope takes to fully draw in
-const STAGGER_S = 0.07;         // delay between consecutive slopes' animation start
+const DRAW_DURATION_S = 1.8;
+const STAGGER_S = 0.07;
+
+const BASE_LINE_WIDTH = 3;
+const HOVER_LINE_WIDTH = 5.5;
+const DIMMED_OPACITY = 0.22;
+const ACTIVE_OPACITY = 1.0;
 
 /**
- * Renders all slopes as polylines colored by difficulty.
- * On mount, each slope "draws in" from start to end — implemented by animating
- * `dashSize`/`gapSize` on drei <Line>'s dashed material. Staggered launches give
- * a cascading reveal across the mountain.
+ * All slopes as polylines, colored by difficulty.
+ * - Cubic ease-out draw-in animation on mount (staggered per index)
+ * - Hover thickens + brightens; other slopes dim
+ * - Click opens the InfoPanel via viewer store
  */
 export default function Slopes({ slopes, yOffset = 8 }: SlopesProps) {
   return (
@@ -45,7 +52,6 @@ function SlopeLine({
 }) {
   const color = DIFFICULTY[slope.difficulty]?.color ?? "#ffffff";
 
-  // Memoize the points + total Euclidean length once per slope (doesn't change post-mount).
   const { points, totalLength } = useMemo(() => {
     const pts = slope.points.map(
       ([x, y, z]) => [x, y + yOffset, z] as [number, number, number]
@@ -66,21 +72,36 @@ function SlopeLine({
   useFrame(({ clock }) => {
     const line = lineRef.current;
     if (!line) return;
+
     if (startedAtRef.current === null) {
       startedAtRef.current = clock.elapsedTime;
     }
     const elapsed = clock.elapsedTime - startedAtRef.current - startDelay;
     const raw = Math.max(0, Math.min(1, elapsed / DRAW_DURATION_S));
-    // Cubic ease-out: fast at the start, gentle finish.
     const eased = 1 - Math.pow(1 - raw, 3);
 
     const material = line.material as LineMaterial;
-    if (material) {
-      // dashSize is the visible portion of the line; gapSize is the rest.
-      // Both add up to roughly totalLength, so the dash pattern doesn't wrap.
-      material.dashSize = eased * totalLength + 0.001;
-      material.gapSize = (1 - eased) * totalLength + 1;
-    }
+    if (!material) return;
+
+    // Draw-in
+    material.dashSize = eased * totalLength + 0.001;
+    material.gapSize = (1 - eased) * totalLength + 1;
+
+    // Hover/select state — read directly from store to avoid re-renders.
+    const state = useViewerStore.getState();
+    const isHovered = state.hoveredId === slope.id;
+    const isSelected =
+      state.selection?.type === "slope" && state.selection.data.id === slope.id;
+    const anyActive = state.hoveredId !== null || state.selection !== null;
+    const isDimmed = anyActive && !isHovered && !isSelected;
+
+    const targetOpacity = isDimmed ? DIMMED_OPACITY : ACTIVE_OPACITY;
+    const targetWidth = isHovered || isSelected ? HOVER_LINE_WIDTH : BASE_LINE_WIDTH;
+
+    // Smooth lerp toward target
+    material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, 0.18);
+    material.transparent = true;
+    material.linewidth = THREE.MathUtils.lerp(material.linewidth, targetWidth, 0.2);
   });
 
   return (
@@ -88,11 +109,26 @@ function SlopeLine({
       ref={lineRef}
       points={points}
       color={color}
-      lineWidth={3}
+      lineWidth={BASE_LINE_WIDTH}
+      transparent
       dashed
       dashScale={1}
       dashSize={0.001}
       gapSize={totalLength + 1}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        useViewerStore.getState().setHovered(slope.id);
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={(e) => {
+        e.stopPropagation();
+        useViewerStore.getState().setHovered(null);
+        document.body.style.cursor = "";
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        useViewerStore.getState().selectSlope(slope);
+      }}
     />
   );
 }

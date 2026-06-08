@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { Html } from "@react-three/drei";
 import type { ViewerSlope, ViewerLift } from "@/lib/api";
 import { DIFFICULTY } from "@/lib/utils";
+import { useViewerStore } from "@/lib/viewer-store";
+import { cn } from "@/lib/utils";
 
 type LabelsProps = {
   slopes: ViewerSlope[];
@@ -13,31 +15,34 @@ type LabelsProps = {
 };
 
 // Animation tuning
-const BUBBLE_BASE_DELAY = 0.4;   // wait for slopes to start drawing in
-const BUBBLE_STAGGER = 0.04;      // gap between consecutive bubble-ins (random-ordered)
+const BUBBLE_BASE_DELAY = 0.4;
+const BUBBLE_STAGGER = 0.04;
 
 /**
  * Floating name chips for slopes and lifts.
  *
- * Slopes: one chip at the polyline midpoint.
- * Lifts:  two chips — one at entry station, one at exit station.
+ * Each chip dims to 22% opacity when any *other* slope/lift is hovered or
+ * selected, mirroring the line-dimming behaviour in the 3D scene.
  *
- * Each chip animates in with a "bubble" pop (scale 0 → overshoot 1.18 → settle 1)
- * via CSS keyframes. Order is randomly shuffled on each mount so the reveal
- * feels organic rather than mechanically left-to-right.
+ * The hover state is read via a Zustand subscription at this parent, so only
+ * one component re-renders per hover change (children re-receive props).
  */
 export default function Labels({ slopes, lifts, yOffset = 30 }: LabelsProps) {
   const uniqueSlopes = dedupByName(slopes);
   const uniqueLifts = dedupByName(lifts);
 
-  // Each slope gets 1 slot; each lift gets 2 (entry + exit). Shuffled.
+  // Subscribing here means Labels re-renders on hover/select changes; children
+  // re-render with new isDimmed props. 28 cheap renders per hover, no useFrame.
+  const hoveredId = useViewerStore((s) => s.hoveredId);
+  const selectionId = useViewerStore((s) => s.selection?.data.id ?? null);
+  const anyActive = hoveredId !== null || selectionId !== null;
+
   const animationDelays = useMemo(() => {
     const totalSlots = uniqueSlopes.length + uniqueLifts.length * 2;
     const slots = Array.from(
       { length: totalSlots },
       (_, i) => BUBBLE_BASE_DELAY + i * BUBBLE_STAGGER
     );
-    // Fisher-Yates shuffle so the order is random each session.
     for (let i = slots.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [slots[i], slots[j]] = [slots[j], slots[i]];
@@ -56,21 +61,41 @@ export default function Labels({ slopes, lifts, yOffset = 30 }: LabelsProps) {
         const mid = polylineMidpoint(s.points);
         const pos: [number, number, number] = [mid[0], mid[1] + yOffset, mid[2]];
         const color = DIFFICULTY[s.difficulty]?.color ?? "#ffffff";
+        const isActive = s.id === hoveredId || s.id === selectionId;
+        const isDimmed = anyActive && !isActive;
         return (
           <Html
             key={`s-${s.id}`}
             position={pos}
             center
-            wrapperClass="pointer-events-none select-none"
+            wrapperClass="select-none"
           >
             <div
               className="label-bubble-in"
               style={{ animationDelay: `${slopeDelays[i]}s` }}
             >
-              <div className="flex items-center gap-1.5 bg-zinc-900/85 text-zinc-100 text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap shadow border border-white/10">
+              <button
+                type="button"
+                onPointerOver={(e) => {
+                  e.stopPropagation();
+                  useViewerStore.getState().setHovered(s.id);
+                }}
+                onPointerOut={(e) => {
+                  e.stopPropagation();
+                  useViewerStore.getState().setHovered(null);
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  useViewerStore.getState().selectSlope(s);
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 bg-zinc-900/85 hover:bg-zinc-800/95 text-zinc-100 text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap shadow border border-white/10 hover:border-white/30 cursor-pointer transition-all duration-200",
+                  isDimmed && "opacity-25"
+                )}
+              >
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
                 {s.name}
-              </div>
+              </button>
             </div>
           </Html>
         );
@@ -81,6 +106,8 @@ export default function Labels({ slopes, lifts, yOffset = 30 }: LabelsProps) {
         const entry = l.points[0];
         const exit = l.points[l.points.length - 1];
         const liftOffset = yOffset + 35;
+        const isActive = l.id === hoveredId || l.id === selectionId;
+        const isDimmed = anyActive && !isActive;
         return [
           { point: entry, key: `l-${l.id}-entry`, delay: liftEntryDelays[i] },
           { point: exit, key: `l-${l.id}-exit`, delay: liftExitDelays[i] },
@@ -89,16 +116,34 @@ export default function Labels({ slopes, lifts, yOffset = 30 }: LabelsProps) {
             key={key}
             position={[point[0], point[1] + liftOffset, point[2]]}
             center
-            wrapperClass="pointer-events-none select-none"
+            wrapperClass="select-none"
           >
             <div
               className="label-bubble-in"
               style={{ animationDelay: `${delay}s` }}
             >
-              <div className="flex items-center gap-1.5 bg-zinc-900/85 text-amber-300 text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap shadow border border-amber-300/30">
+              <button
+                type="button"
+                onPointerOver={(e) => {
+                  e.stopPropagation();
+                  useViewerStore.getState().setHovered(l.id);
+                }}
+                onPointerOut={(e) => {
+                  e.stopPropagation();
+                  useViewerStore.getState().setHovered(null);
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  useViewerStore.getState().selectLift(l);
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 bg-zinc-900/85 hover:bg-zinc-800/95 text-amber-300 text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap shadow border border-amber-300/30 hover:border-amber-300/60 cursor-pointer transition-all duration-200",
+                  isDimmed && "opacity-25"
+                )}
+              >
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                 {l.name}
-              </div>
+              </button>
             </div>
           </Html>
         ));

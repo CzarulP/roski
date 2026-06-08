@@ -6,6 +6,7 @@ import { Line } from "@react-three/drei";
 import type { Line2, LineMaterial } from "three-stdlib";
 import * as THREE from "three";
 import type { ViewerLift } from "@/lib/api";
+import { useViewerStore } from "@/lib/viewer-store";
 
 type LiftsProps = {
   lifts: ViewerLift[];
@@ -13,16 +14,19 @@ type LiftsProps = {
   yOffset?: number;
 };
 
-// Lifts start drawing a touch after the first slopes for cascade feel.
 const LIFT_GLOBAL_DELAY_S = 0.2;
 const DRAW_DURATION_S = 1.6;
 const STAGGER_S = 0.06;
-const SPHERE_GROWTH_S = 0.35;   // how long station spheres take to scale to full size
+const SPHERE_GROWTH_S = 0.35;
+
+const BASE_LINE_WIDTH = 2;
+const HOVER_LINE_WIDTH = 4;
+const DIMMED_OPACITY = 0.25;
+const ACTIVE_OPACITY = 1.0;
+const HOVER_SPHERE_SCALE = 1.5;
 
 /**
- * Renders lifts as a cable line + pylon markers at each station.
- * Cable animates in via dashed material (same trick as slopes).
- * Station spheres scale up from 0 → 1 over the first 0.6 s of each lift's animation.
+ * Lifts as cable + endpoint spheres. Same hover/click pattern as slopes.
  */
 export default function Lifts({ lifts, yOffset = 25 }: LiftsProps) {
   return (
@@ -67,13 +71,28 @@ function LiftLine({
   const sphereRefs = useRef<(THREE.Mesh | null)[]>([]);
   const startedAtRef = useRef<number | null>(null);
 
+  // We want a single per-frame handler to drive cable + sphere animation +
+  // hover/select visuals.
+  const targetSphereScaleRef = useRef(0);
+
   useFrame(({ clock }) => {
     if (startedAtRef.current === null) {
       startedAtRef.current = clock.elapsedTime;
     }
     const elapsed = clock.elapsedTime - startedAtRef.current - startDelay;
 
-    // Cable draw-in
+    // ---- store-driven highlight state ----
+    const state = useViewerStore.getState();
+    const isHovered = state.hoveredId === lift.id;
+    const isSelected =
+      state.selection?.type === "lift" && state.selection.data.id === lift.id;
+    const anyActive = state.hoveredId !== null || state.selection !== null;
+    const isDimmed = anyActive && !isHovered && !isSelected;
+
+    const targetOpacity = isDimmed ? DIMMED_OPACITY : ACTIVE_OPACITY;
+    const targetWidth = isHovered || isSelected ? HOVER_LINE_WIDTH : BASE_LINE_WIDTH;
+
+    // ---- cable ----
     const line = lineRef.current;
     if (line) {
       const raw = Math.max(0, Math.min(1, elapsed / DRAW_DURATION_S));
@@ -82,17 +101,50 @@ function LiftLine({
       if (material) {
         material.dashSize = eased * totalLength + 0.001;
         material.gapSize = (1 - eased) * totalLength + 1;
+        material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, 0.18);
+        material.transparent = true;
+        material.linewidth = THREE.MathUtils.lerp(material.linewidth, targetWidth, 0.2);
       }
     }
 
-    // Station spheres scale-in (faster than cable so they "anchor" first)
-    const sphereScale = Math.max(0, Math.min(1, elapsed / SPHERE_GROWTH_S));
-    // Ease-out cubic for that satisfying "pop"
-    const sphereEased = 1 - Math.pow(1 - sphereScale, 3);
+    // ---- spheres ----
+    // Initial grow-in: 0 → 1 over SPHERE_GROWTH_S.
+    const growT = Math.max(0, Math.min(1, elapsed / SPHERE_GROWTH_S));
+    const growEased = 1 - Math.pow(1 - growT, 3);
+    const baseScale = growEased;
+    const hoverBonus = isHovered || isSelected ? HOVER_SPHERE_SCALE : 1.0;
+    const targetSphereScale = baseScale * hoverBonus;
+    targetSphereScaleRef.current = THREE.MathUtils.lerp(
+      targetSphereScaleRef.current,
+      targetSphereScale,
+      0.2
+    );
+
     for (const m of sphereRefs.current) {
-      if (m) m.scale.setScalar(sphereEased);
+      if (!m) continue;
+      m.scale.setScalar(targetSphereScaleRef.current);
+      const mat = m.material as THREE.MeshStandardMaterial;
+      if (mat) {
+        mat.transparent = true;
+        mat.opacity = THREE.MathUtils.lerp(mat.opacity, targetOpacity, 0.18);
+      }
     }
   });
+
+  const handlePointerOver = (e: { stopPropagation(): void }) => {
+    e.stopPropagation();
+    useViewerStore.getState().setHovered(lift.id);
+    document.body.style.cursor = "pointer";
+  };
+  const handlePointerOut = (e: { stopPropagation(): void }) => {
+    e.stopPropagation();
+    useViewerStore.getState().setHovered(null);
+    document.body.style.cursor = "";
+  };
+  const handleClick = (e: { stopPropagation(): void }) => {
+    e.stopPropagation();
+    useViewerStore.getState().selectLift(lift);
+  };
 
   return (
     <group>
@@ -100,11 +152,15 @@ function LiftLine({
         ref={lineRef}
         points={points}
         color="#f1f5f9"
-        lineWidth={2}
+        lineWidth={BASE_LINE_WIDTH}
+        transparent
         dashed
         dashScale={1}
         dashSize={0.001}
         gapSize={totalLength + 1}
+        onPointerOver={handlePointerOver}
+        onPointerOut={handlePointerOut}
+        onClick={handleClick}
       />
       {stations.map((p, i) => (
         <mesh
@@ -114,6 +170,9 @@ function LiftLine({
           }}
           position={p}
           scale={0}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
+          onClick={handleClick}
         >
           <sphereGeometry args={[7, 16, 16]} />
           <meshStandardMaterial color="#f59e0b" />

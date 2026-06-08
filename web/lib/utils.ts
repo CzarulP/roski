@@ -42,3 +42,31 @@ export const DIFFICULTY = {
   hard: { label: "Dificil", color: "#dc2626", textColor: "text-red-500" },
   expert: { label: "Expert", color: "#0a0a0a", textColor: "text-zinc-100" },
 } as const;
+
+export const LIFT_TYPE_LABELS: Record<string, string> = {
+  gondola: "Gondolă",
+  cable_car: "Telecabină",
+  chair: "Telescaun",
+  drag: "Teleschi",
+};
+
+export function describeLiftType(type: string): string {
+  return LIFT_TYPE_LABELS[type] ?? type;
+}
+
+/**
+ * Romanian-aware filename slug.
+ *   "2 Pârtia Canal"         → "2-partia-canal"
+ *   "IV. Telescaun 4"        → "iv-telescaun-4"
+ *   "5a Pârtia Mutu"         → "5a-partia-mutu"
+ *   "XII. Telescaun 3 (4 locuri debraiabil)" → "xii-telescaun-3-4-locuri-debraiabil"
+ */
+export function toSlug(name: string): string {
+  return name
+    .normalize("NFD")                       // split base + combining diacritics
+    .replace(/[̀-ͯ]/g, "")        // strip diacritics
+    .toLowerCase()
+    .replace(/\./g, "")                     // remove dots
+    .replace(/[^a-z0-9]+/g, "-")           // non-alphanumeric runs → dash
+    .replace(/^-+|-+$/g, "");               // trim
+}
