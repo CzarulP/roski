@@ -49,3 +49,20 @@ body {
 
 /* Smooth canvas focus state */
 canvas { outline: none; }
+
+/* Viewer label bubble-in animation — runs once on mount, with per-label delay
+   applied via inline style. Back-out easing gives a satisfying overshoot. */
+@keyframes label-bubble-in {
+  0%   { transform: scale(0);   opacity: 0; }
+  60%  { transform: scale(1.18); opacity: 1; }
+  85%  { transform: scale(0.96); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.label-bubble-in {
+  animation-name: label-bubble-in;
+  animation-duration: 0.35s;
+  animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation-fill-mode: backwards;   /* hold scale(0) until animation-delay elapses */
+  transform-origin: center;
+  will-change: transform, opacity;
+}
