@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Roski.Api.Features.Resorts;
+using Roski.Api.Features.StrajaOnline;
 using Roski.Api.Features.Viewer;
 using Roski.Api.Features.Weather;
 using Roski.Api.Persistence;
@@ -50,5 +51,6 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok", time = DateTime.UtcN
 app.MapResortEndpoints();
 app.MapViewerEndpoints();
 app.MapWeatherEndpoints();
+app.MapStrajaOnlineEndpoints();
 
 app.Run();
