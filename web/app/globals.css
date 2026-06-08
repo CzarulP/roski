@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07090d;
-  --foreground: #f8fafc;
-  --muted: #1a1f2a;
-  --muted-foreground: #94a3b8;
-  --border: #1f2733;
-  --accent: #38bdf8;
-  --accent-foreground: #03101a;
-  --card: #0d1320;
-  --card-foreground: #f8fafc;
+  /* Winter night palette — cool, deep, slightly blue */
+  --background: #060a14;
+  --foreground: #f1f5fb;
+  --muted: #18203a;
+  --muted-foreground: #8ea3c2;
+  --border: #1f2942;
+  --accent: #7fb7ff;
+  --accent-foreground: #0a1428;
+  --accent-hot: #fbbf24;     /* warm amber for highlights / cabins / lifts */
+  --card: #0c1224;
+  --card-foreground: #f1f5fb;
+  --snow: #e8eef6;
 }
 
 @theme inline {
@@ -20,8 +23,10 @@
   --color-border: var(--border);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-hot: var(--accent-hot);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-snow: var(--snow);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -35,12 +40,38 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   font-feature-settings: "ss01", "cv01";
   -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(127, 183, 255, 0.07), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(251, 191, 36, 0.04), transparent 70%);
+  background-attachment: fixed;
 }
 
 /* Subtle grain background for hero areas */
 .bg-grain {
   background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
   background-size: 3px 3px;
+}
+
+/* Frosted glass effect for cards */
+.glass {
+  background: color-mix(in srgb, var(--card) 78%, transparent);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+/* Snowy gradient for atmosphere */
+.bg-snow-fade {
+  background: linear-gradient(180deg,
+    rgba(232, 238, 246, 0.08) 0%,
+    rgba(127, 183, 255, 0.03) 30%,
+    transparent 100%);
+}
+
+/* Aurora-style accent glow */
+.bg-aurora {
+  background:
+    radial-gradient(ellipse 60% 30% at 20% 0%, rgba(127, 183, 255, 0.18), transparent 70%),
+    radial-gradient(ellipse 50% 30% at 80% 10%, rgba(251, 191, 36, 0.12), transparent 70%);
 }
 
 /* Hide scrollbar in 3D viewer */
@@ -50,8 +81,7 @@ body {
 /* Smooth canvas focus state */
 canvas { outline: none; }
 
-/* Viewer label bubble-in animation — runs once on mount, with per-label delay
-   applied via inline style. Back-out easing gives a satisfying overshoot. */
+/* Viewer label bubble-in animation */
 @keyframes label-bubble-in {
   0%   { transform: scale(0);   opacity: 0; }
   60%  { transform: scale(1.18); opacity: 1; }
@@ -62,16 +92,48 @@ canvas { outline: none; }
   animation-name: label-bubble-in;
   animation-duration: 0.35s;
   animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
-  animation-fill-mode: backwards;   /* hold scale(0) until animation-delay elapses */
+  animation-fill-mode: backwards;
   transform-origin: center;
   will-change: transform, opacity;
 }
 
-/* Info panel slide + fade in from the right side */
+/* Info panel slide + fade in from the right */
 @keyframes info-panel-in {
   from { opacity: 0; transform: translateX(20px) scale(0.97); }
   to   { opacity: 1; transform: translateX(0) scale(1); }
 }
 .info-panel-in {
   animation: info-panel-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Page section fade-in on scroll */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+/* Numbered marker badges */
+.marker-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono), monospace;
+}
+
+/* Image hover zoom */
+.zoom-on-hover img {
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.zoom-on-hover:hover img {
+  transform: scale(1.06);
 }
