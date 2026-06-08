@@ -2,8 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, MapPin, Mountain, Move3d, Snowflake, TramFront, Compass, Camera } from "lucide-react";
-import { endpoints } from "@/lib/api";
+import { endpoints, type ExternalData } from "@/lib/api";
 import WeatherCard from "@/components/WeatherCard";
+import SkipassSection from "@/components/SkipassSection";
+import AccommodationsSection from "@/components/AccommodationsSection";
+import RentalsSection from "@/components/RentalsSection";
 
 const SLOPE_PHOTO_FILES = [
   "i-partia-straja.jpg",
@@ -20,6 +23,7 @@ export default async function ResortPage({ params }: { params: Promise<{ slug: s
   const { slug } = await params;
 
   let resort, weather;
+  let external: ExternalData | null = null;
   try {
     resort = await endpoints.resort(slug);
   } catch {
@@ -29,6 +33,11 @@ export default async function ResortPage({ params }: { params: Promise<{ slug: s
     weather = await endpoints.weather(slug);
   } catch {
     weather = null;
+  }
+  try {
+    external = await endpoints.external(slug);
+  } catch {
+    external = null;
   }
 
   const heroPhoto = `/slopes/${SLOPE_PHOTO_FILES[0]}`;
@@ -220,6 +229,15 @@ export default async function ResortPage({ params }: { params: Promise<{ slug: s
           ))}
         </div>
       </section>
+
+      {/* ================= SKIPASS / CAZARE / ÎNCHIRIERI ================= */}
+      {external && (
+        <>
+          <SkipassSection skipass={external.skipass} />
+          <AccommodationsSection items={external.accommodations} />
+          <RentalsSection items={external.rentals} />
+        </>
+      )}
 
       {/* ================= ABOUT ================= */}
       <section className="mx-auto max-w-7xl px-6 py-16">
