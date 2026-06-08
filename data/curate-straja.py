@@ -62,9 +62,10 @@ SLOPE_OVERRIDES: dict[int, tuple[str, str]] = {
     307502156: ("1 Pârtia Lupului",    "expert"),
     307502139: ("1a Pârtia Lupului II", "expert"),
 
-    # Constantinescu — two real segments; both labelled "3" for now.
-    900945329: ("3 Pârtia Constantinescu", "hard"),
-    307502152: ("3 Pârtia Constantinescu", "hard"),
+    # Constantinescu — two real segments. Top (longer, 730 m) is the easier 3a
+    # section in BLUE; bottom (shorter, 247 m) is 3b in RED.
+    900945329: ("3a Pârtia Constantinescu", "medium"),  # top, longer
+    307502152: ("3b Pârtia Constantinescu", "hard"),    # bottom, shorter
 
     # Pârtia 8 (Vf. Straja) is RED per the official map.
     307502143: ("8 Pârtia vf. Straja", "hard"),
