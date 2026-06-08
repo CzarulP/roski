@@ -29,12 +29,8 @@ const TERRAIN_HALF_Z = 2800;
 const TARGET_MIN_Y = 900;
 const TARGET_MAX_Y = 1900;
 
-// Elevation thresholds for the snow shader (metres above sea level).
-// Luminance-aware: only open ground (slopes, clearings, rock) gets the snow
-// tint; densely forested pixels stay dark so the slope corridors remain visible.
-const SNOW_LINE_M = 1180;
-const SNOW_FULL_M = 1650;
-const SNOW_TINT_AMOUNT = 0.65;
+// Snow is now baked into the satellite texture (see bake-terrain.py --snow),
+// so no runtime shader injection is needed.
 
 // Camera safety floor — kept below the summit (1857 m) so users can get close,
 // but high enough to prevent egregious "inside the mountain" clipping.
@@ -106,48 +102,6 @@ function Terrain({ url }: { url: string }) {
         mat.map.anisotropy = 16;
         mat.map.needsUpdate = true;
       }
-
-      // Inject elevation-based snow tint into the standard shader.
-      mat.onBeforeCompile = (shader) => {
-        shader.uniforms.uSnowLine = { value: SNOW_LINE_M };
-        shader.uniforms.uSnowFull = { value: SNOW_FULL_M };
-        shader.uniforms.uSnowAmount = { value: SNOW_TINT_AMOUNT };
-
-        shader.vertexShader = shader.vertexShader
-          .replace(
-            "#include <common>",
-            `#include <common>\nvarying float vWorldElevation;`
-          )
-          .replace(
-            "#include <begin_vertex>",
-            `#include <begin_vertex>\nvWorldElevation = (modelMatrix * vec4(position, 1.0)).y;`
-          );
-
-        shader.fragmentShader = shader.fragmentShader
-          .replace(
-            "#include <common>",
-            `#include <common>
-            varying float vWorldElevation;
-            uniform float uSnowLine;
-            uniform float uSnowFull;
-            uniform float uSnowAmount;`
-          )
-          .replace(
-            "#include <map_fragment>",
-            `#include <map_fragment>
-            // Forest pixels are dark (~0.15-0.30 luminance); open ground (slopes,
-            // clearings, snow already on the satellite, rock outcrops) is brighter.
-            // Letting "openness" gate the snow tint preserves slope-corridor detail.
-            float lum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
-            float openness = smoothstep(0.28, 0.50, lum);
-            // Per-fragment wobble so the snow line isn't a perfect contour.
-            float wobble = (fract(sin(dot(diffuseColor.rgb, vec3(12.9898, 78.233, 37.719))) * 43758.5453) - 0.5) * 80.0;
-            float elevationMix = smoothstep(uSnowLine + wobble, uSnowFull + wobble, vWorldElevation);
-            float snowMix = elevationMix * uSnowAmount * (0.35 + 0.65 * openness);
-            diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.97, 0.98, 1.0), snowMix);`
-          );
-      };
-      mat.needsUpdate = true;
     });
   }, [scene]);
 

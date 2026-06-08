@@ -196,6 +196,88 @@ def crop_satellite_to_bbox(composite: Image.Image,
 
 
 # ---------------------------------------------------------------------------
+# Snow post-process — turn a summer satellite drape into a winter look
+# ---------------------------------------------------------------------------
+
+def apply_snow(texture: Image.Image,
+               hgt: np.ndarray,
+               tile_origin: tuple[int, int],
+               lat_min: float, lat_max: float,
+               lon_min: float, lon_max: float,
+               snow_line_m: float = 1150.0,
+               snow_full_m: float = 1700.0,
+               max_amount: float = 0.92,
+               forest_dampen: float = 0.70,
+               seed: int = 42) -> Image.Image:
+    """Convert a summer texture into a plausible winter version.
+
+    The snow probability per pixel combines:
+      * elevation (smoothstep from snow_line_m to snow_full_m, sampled from SRTM)
+      * "openness" (high luminance, low green-dominance = bare ground/slopes/rock)
+      * spatial noise so the snow line isn't a perfect contour
+    Forests get less snow tint so the slope corridors remain visually distinct.
+    """
+    rng = np.random.default_rng(seed)
+    w, h = texture.size
+    arr = np.asarray(texture, dtype=np.float32)  # (h, w, 3)
+
+    # --- per-pixel elevation via SRTM bilinear ---
+    # Row 0 is at lat_max, row h-1 is at lat_min.
+    lats = lat_max + (lat_min - lat_max) * (np.arange(h) + 0.5) / h
+    lons = lon_min + (lon_max - lon_min) * (np.arange(w) + 0.5) / w
+    lon_grid, lat_grid = np.meshgrid(lons, lats)
+    elev = sample_elevation(hgt, tile_origin, lat_grid.ravel(), lon_grid.ravel()).reshape(h, w)
+
+    # --- elevation factor (smoothstep) ---
+    t = np.clip((elev - snow_line_m) / (snow_full_m - snow_line_m), 0.0, 1.0)
+    elevation_factor = t * t * (3.0 - 2.0 * t)  # smoothstep
+
+    # --- openness factor: luminance + non-green-dominance ---
+    r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
+    lum = 0.299 * r + 0.587 * g + 0.114 * b
+    # Forests are dark, open ground is light.
+    bright = np.clip((lum - 55.0) / 75.0, 0.0, 1.0)
+    # Green dominance — high in forests, low on roads/rocks/slopes.
+    green_dom = np.clip((g - 0.5 * (r + b)) / 40.0, 0.0, 1.0)
+    openness = bright * (1.0 - forest_dampen * green_dom)
+    openness = np.clip(openness, 0.0, 1.0)
+
+    # --- low-frequency spatial noise for natural snow-line variation ---
+    # Sample noise at low res then upscale (Pillow handles smoothing).
+    coarse = 96
+    noise_lo = rng.random((coarse, coarse), dtype=np.float32)
+    noise_img = Image.fromarray((noise_lo * 255).astype(np.uint8)).resize(
+        (w, h), Image.Resampling.BILINEAR
+    )
+    noise = np.asarray(noise_img, dtype=np.float32) / 255.0
+    # ±15% wobble around the elevation factor
+    elevation_factor = np.clip(elevation_factor + (noise - 0.5) * 0.30, 0.0, 1.0)
+
+    # --- combined snow mask ---
+    # Open ground gets ~max_amount; even forests pick up ~60% so the whole
+    # mountain reads as winter, not a snowless dark canopy.
+    snow = elevation_factor * (0.60 + 0.40 * openness) * max_amount
+
+    # Tiny sparkle high frequency noise for texture variation in heavily-snowed areas
+    sparkle = (rng.random((h, w), dtype=np.float32) - 0.5) * 0.05
+    snow = np.clip(snow + sparkle * (snow > 0.3), 0.0, 1.0)
+
+    # --- snow colour with a slight cool tint ---
+    snow_color = np.array([248.0, 251.0, 255.0], dtype=np.float32)
+
+    # Mix
+    mask = snow[..., None]
+    out = arr * (1.0 - mask) + snow_color * mask
+
+    # --- in heavily snowed pixels, slight blue shadow shift to look colder ---
+    shade = np.clip(snow - 0.55, 0.0, 1.0) * 0.25
+    out[..., 2] = np.minimum(255.0, out[..., 2] + shade * 8.0)
+    out[..., 0] = np.maximum(0.0, out[..., 0] - shade * 4.0)
+
+    return Image.fromarray(np.clip(out, 0.0, 255.0).astype(np.uint8))
+
+
+# ---------------------------------------------------------------------------
 # Mesh
 # ---------------------------------------------------------------------------
 
@@ -276,6 +358,12 @@ def main() -> int:
                    help="cap final texture longest side (default 4096; higher = bigger file)")
     p.add_argument("--jpeg-quality", type=int, default=88,
                    help="JPEG quality for embedded texture, 0..100 (default 88)")
+    p.add_argument("--snow", action="store_true",
+                   help="apply winter snow post-process to the satellite texture before baking")
+    p.add_argument("--snow-line", type=float, default=1150.0,
+                   help="elevation (m) where snow starts (default 1150)")
+    p.add_argument("--snow-full", type=float, default=1700.0,
+                   help="elevation (m) at which snow is fully laid down (default 1700)")
     p.add_argument("--out", required=True, help="output .glb path")
     args = p.parse_args()
 
@@ -305,6 +393,18 @@ def main() -> int:
     )
     texture = crop_satellite_to_bbox(composite, tile_bbox, lat_min, lat_max, lon_min, lon_max, args.zoom)
     print(f"[sat] cropped texture {texture.size[0]}x{texture.size[1]} px")
+
+    # 3.5 Optional snow post-process — turn summer into winter.
+    if args.snow:
+        print(f"[snow] applying winter snow ({args.snow_line:.0f}..{args.snow_full:.0f} m)…")
+        texture = apply_snow(
+            texture,
+            hgt,
+            (tile_lat_int, tile_lon_int),
+            lat_min, lat_max, lon_min, lon_max,
+            snow_line_m=args.snow_line,
+            snow_full_m=args.snow_full,
+        )
 
     # Downscale texture if it exceeds the max-texture-px cap (4K typical).
     long_side = max(texture.size)
