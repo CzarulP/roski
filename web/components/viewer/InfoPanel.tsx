@@ -138,18 +138,18 @@ function LiftContent({ lift, external }: { lift: ViewerLift; external?: External
       </div>
 
       {skipassInfo && (
-        <div className="rounded-lg border border-amber-300/30 bg-gradient-to-br from-amber-400/10 to-amber-600/5 p-3">
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-amber-300 font-mono">
+        <div className="rounded-lg border border-amber-300/40 bg-gradient-to-br from-amber-500/15 to-amber-700/10 p-3">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-amber-200 font-mono">
             <Ticket className="w-3.5 h-3.5" />
             Skipass pe puncte
           </div>
           <div className="mt-1.5 flex items-baseline justify-between">
-            <span className="text-2xl font-semibold tabular-nums">
+            <span className="text-2xl font-semibold tabular-nums text-foreground">
               {skipassInfo.points}
-              <span className="text-sm text-muted-foreground ml-1 font-normal">puncte / urcare</span>
+              <span className="text-sm text-foreground/70 ml-1 font-normal">puncte / urcare</span>
             </span>
           </div>
-          <div className="mt-1 text-[11px] text-muted-foreground">{skipassInfo.passName}</div>
+          <div className="mt-1 text-[11px] text-foreground/65">{skipassInfo.passName}</div>
         </div>
       )}
     </div>

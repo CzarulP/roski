@@ -1,18 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  /* Winter night palette — cool, deep, slightly blue */
-  --background: #060a14;
-  --foreground: #f1f5fb;
-  --muted: #18203a;
-  --muted-foreground: #8ea3c2;
-  --border: #1f2942;
-  --accent: #7fb7ff;
-  --accent-foreground: #0a1428;
-  --accent-hot: #fbbf24;     /* warm amber for highlights / cabins / lifts */
-  --card: #0c1224;
-  --card-foreground: #f1f5fb;
-  --snow: #e8eef6;
+  /* Soft daylight palette — light but not blinding.
+     Muted, slightly cool slate-grey background with warm tinting overall.
+     Reduced contrast for comfortable long viewing (no pure-black on pure-white). */
+  --background: #dee3ec;       /* soft warm slate-blue, not punchy */
+  --foreground: #1d2738;       /* deep navy, not pure black */
+  --muted: #ced5e0;
+  --muted-foreground: #5b6b85;
+  --border: #b9c2cf;
+  --accent: #2563eb;           /* confident mountain blue */
+  --accent-foreground: #ffffff;
+  --accent-hot: #d97706;       /* warmer ember amber, softer than gold */
+  --accent-pine: #2a7a5e;
+  --card: #e8edf4;             /* slightly lighter than bg for depth */
+  --card-foreground: #1d2738;
+  --snow: #ffffff;
+  --ring: rgba(37, 99, 235, 0.30);
 }
 
 @theme inline {
@@ -24,9 +28,11 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-hot: var(--accent-hot);
+  --color-accent-pine: var(--accent-pine);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-snow: var(--snow);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -41,37 +47,38 @@ body {
   font-feature-settings: "ss01", "cv01";
   -webkit-font-smoothing: antialiased;
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(127, 183, 255, 0.07), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(251, 191, 36, 0.04), transparent 70%);
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(37, 99, 235, 0.07), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(217, 119, 6, 0.05), transparent 70%);
   background-attachment: fixed;
 }
 
-/* Subtle grain background for hero areas */
-.bg-grain {
-  background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
-  background-size: 3px 3px;
-}
-
-/* Frosted glass effect for cards */
+/* Frosted glass card — for overlays on imagery or 3D */
 .glass {
-  background: color-mix(in srgb, var(--card) 78%, transparent);
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  background: rgba(232, 237, 244, 0.82);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-color: rgba(185, 194, 207, 0.7);
 }
 
 /* Snowy gradient for atmosphere */
 .bg-snow-fade {
   background: linear-gradient(180deg,
-    rgba(232, 238, 246, 0.08) 0%,
-    rgba(127, 183, 255, 0.03) 30%,
+    rgba(37, 99, 235, 0.06) 0%,
+    rgba(217, 119, 6, 0.04) 50%,
     transparent 100%);
 }
 
 /* Aurora-style accent glow */
 .bg-aurora {
   background:
-    radial-gradient(ellipse 60% 30% at 20% 0%, rgba(127, 183, 255, 0.18), transparent 70%),
-    radial-gradient(ellipse 50% 30% at 80% 10%, rgba(251, 191, 36, 0.12), transparent 70%);
+    radial-gradient(ellipse 60% 30% at 20% 0%, rgba(37, 99, 235, 0.14), transparent 70%),
+    radial-gradient(ellipse 50% 30% at 80% 10%, rgba(217, 119, 6, 0.10), transparent 70%);
+}
+
+/* Subtle paper-grain background */
+.bg-grain {
+  background-image: radial-gradient(rgba(29, 39, 56, 0.04) 1px, transparent 1px);
+  background-size: 3px 3px;
 }
 
 /* Hide scrollbar in 3D viewer */
@@ -81,7 +88,7 @@ body {
 /* Smooth canvas focus state */
 canvas { outline: none; }
 
-/* Viewer label bubble-in animation */
+/* === Viewer label bubble-in === */
 @keyframes label-bubble-in {
   0%   { transform: scale(0);   opacity: 0; }
   60%  { transform: scale(1.18); opacity: 1; }
@@ -97,7 +104,7 @@ canvas { outline: none; }
   will-change: transform, opacity;
 }
 
-/* Info panel slide + fade in from the right */
+/* === Info panel slide + fade in from the right === */
 @keyframes info-panel-in {
   from { opacity: 0; transform: translateX(20px) scale(0.97); }
   to   { opacity: 1; transform: translateX(0) scale(1); }
@@ -106,7 +113,7 @@ canvas { outline: none; }
   animation: info-panel-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Page section fade-in on scroll */
+/* === Section fade-in (used across landing/detail) === */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -115,7 +122,7 @@ canvas { outline: none; }
   animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
-/* Numbered marker badges */
+/* === Numbered marker pills === */
 .marker-pill {
   display: inline-flex;
   align-items: center;
@@ -130,10 +137,54 @@ canvas { outline: none; }
   font-family: var(--font-mono), monospace;
 }
 
-/* Image hover zoom */
+/* === Image hover zoom (used on cards) === */
 .zoom-on-hover img {
   transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .zoom-on-hover:hover img {
   transform: scale(1.06);
+}
+
+/* === Weather animations — subtle, mode-specific === */
+@keyframes sun-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.weather-sun-rays {
+  animation: sun-spin 90s linear infinite;
+}
+
+@keyframes snow-drift {
+  0%   { transform: translateY(-10%); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translateY(110%); opacity: 0; }
+}
+.weather-snowflake {
+  animation: snow-drift linear infinite;
+}
+
+@keyframes rain-fall {
+  0%   { transform: translateY(-10%); opacity: 0; }
+  20%  { opacity: 0.7; }
+  100% { transform: translateY(120%); opacity: 0; }
+}
+.weather-raindrop {
+  animation: rain-fall linear infinite;
+}
+
+@keyframes float-soft {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+.float-soft {
+  animation: float-soft 4s ease-in-out infinite;
+}
+
+/* === Number counter pop on scroll === */
+@keyframes counter-pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.counter-pop {
+  animation: counter-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }

@@ -157,7 +157,7 @@ def parse_slopes_and_lifts(osm: dict, srtm, tile_origin: tuple[int, int]
                 "name": name.strip(),
                 "difficulty": difficulty,
                 "lengthM": _try_int(tags.get("piste:length")) or _polyline_length_m(coords),
-                "isOpen": True,
+                "isOpen": False,
                 "geometry": {"type": "LineString", "coordinates": coords},
             })
         elif "aerialway" in tags:
@@ -172,7 +172,7 @@ def parse_slopes_and_lifts(osm: dict, srtm, tile_origin: tuple[int, int]
                 "liftType": mapped,
                 "capacity": _try_int(tags.get("aerialway:capacity")),
                 "hours": None,
-                "isOpen": True,
+                "isOpen": False,
                 "geometry": {"type": "LineString", "coordinates": coords},
             })
 

@@ -334,7 +334,7 @@ def main():
             "name": name,
             "difficulty": difficulty,
             "lengthM": length_m,
-            "isOpen": True,
+            "isOpen": False,
             "geometry": {"type": "LineString", "coordinates": coords},
         })
 
@@ -373,7 +373,7 @@ def main():
         "liftType": "drag",
         "capacity": None,
         "hours": None,
-        "isOpen": True,
+        "isOpen": False,
         "geometry": {"type": "LineString", "coordinates": baby_ski_coords},
     })
 

@@ -52,14 +52,15 @@ export default async function ResortPage({ params }: { params: Promise<{ slug: s
           alt={resort.name}
           fill
           priority
-          className="object-cover scale-105 brightness-[0.55]"
+          className="object-cover scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-background/10" />
-        <div className="absolute inset-0 bg-aurora pointer-events-none opacity-60" />
+        {/* Tasteful darkening so the white text reads, but the photo stays vivid */}
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/85 via-foreground/40 to-foreground/10" />
+        <div className="absolute inset-0 bg-aurora pointer-events-none opacity-30" />
 
-        <div className="relative h-full mx-auto max-w-7xl px-6 flex flex-col justify-end pb-32">
+        <div className="relative h-full mx-auto max-w-7xl px-6 flex flex-col justify-end pb-32 text-white">
           <div className="fade-up" style={{ animationDelay: "0.05s" }}>
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-accent font-mono mb-3">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-white/90 font-mono mb-3">
               <MapPin className="w-3.5 h-3.5" />
               {resort.region}, România
             </div>
@@ -71,7 +72,7 @@ export default async function ResortPage({ params }: { params: Promise<{ slug: s
             {resort.name}
           </h1>
           <p
-            className="fade-up max-w-2xl text-base md:text-lg text-foreground/80 leading-relaxed"
+            className="fade-up max-w-2xl text-base md:text-lg text-white/85 leading-relaxed drop-shadow"
             style={{ animationDelay: "0.25s" }}
           >
             {resort.description}
@@ -80,7 +81,7 @@ export default async function ResortPage({ params }: { params: Promise<{ slug: s
           <div className="fade-up mt-8 flex flex-wrap gap-3" style={{ animationDelay: "0.35s" }}>
             <Link
               href={`/resorts/${resort.slug}/viewer`}
-              className="inline-flex items-center gap-2 h-12 px-6 rounded-full bg-accent text-accent-foreground font-semibold hover:bg-accent/90 transition shadow-lg shadow-accent/20"
+              className="inline-flex items-center gap-2 h-12 px-6 rounded-full bg-gradient-to-r from-accent to-accent/90 text-white font-semibold hover:shadow-xl hover:shadow-accent/30 transition"
             >
               <Move3d className="w-4 h-4" />
               Vizualizare 3D
@@ -90,7 +91,7 @@ export default async function ResortPage({ params }: { params: Promise<{ slug: s
                 href={resort.websiteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 h-12 px-6 rounded-full glass border border-border hover:border-accent/40 transition"
+                className="inline-flex items-center gap-2 h-12 px-6 rounded-full bg-white/15 backdrop-blur border border-white/30 hover:bg-white/25 transition text-white"
               >
                 Site oficial <ExternalLink className="w-4 h-4" />
               </a>
@@ -103,7 +104,7 @@ export default async function ResortPage({ params }: { params: Promise<{ slug: s
       <section className="mx-auto max-w-7xl px-6 -mt-20 relative z-10">
         <div className="grid gap-6 lg:grid-cols-3 fade-up" style={{ animationDelay: "0.45s" }}>
           {/* Quick stats card */}
-          <div className="lg:col-span-2 glass border border-border rounded-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="lg:col-span-2 bg-card shadow-xl ring-1 ring-border border border-border rounded-3xl p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
             <Stat
               icon={<Mountain className="w-4 h-4" />}
               label="Altitudine"

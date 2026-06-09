@@ -47,7 +47,7 @@ public static class Seed
             TerrainOriginLon = 23.2501,
             TerrainModelUrl = "/terrain/straja.glb",
             PreviewImageUrl = "/images/straja-preview.jpg",
-            WebsiteUrl = "https://www.partiastraja.ro",
+            WebsiteUrl = "https://skistraja.ro/",
             Webcams = new List<WebcamLink>
             {
                 new("Vârful Straja", "https://www.partiastraja.ro", "iframe")
