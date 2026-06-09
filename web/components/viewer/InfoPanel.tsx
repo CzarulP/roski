@@ -138,8 +138,8 @@ function LiftContent({ lift, external }: { lift: ViewerLift; external?: External
       </div>
 
       {skipassInfo && (
-        <div className="rounded-lg border border-amber-300/40 bg-gradient-to-br from-amber-500/15 to-amber-700/10 p-3">
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-amber-200 font-mono">
+        <div className="rounded-lg border border-amber-700/40 bg-gradient-to-br from-amber-500/15 to-amber-700/10 p-3">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-amber-700 font-mono">
             <Ticket className="w-3.5 h-3.5" />
             Skipass pe puncte
           </div>
