@@ -24,11 +24,15 @@ type SceneProps = {
 export const DEFAULT_CAMERA_POS: [number, number, number] = [-772, 3024, -2065];
 export const DEFAULT_TARGET: [number, number, number] = [-426, 1400, 207];
 
-// Terrain bbox in scene meters (the GLB is 6 km × 6 km centered on origin).
-const TERRAIN_HALF_X = 2800;
-const TERRAIN_HALF_Z = 2800;
+// Terrain bbox in scene meters — clamps the OrbitControls target so the user
+// can't pan out of the resort area.
+const TERRAIN_HALF_X = 2400;
+const TERRAIN_HALF_Z = 2400;
 const TARGET_MIN_Y = 900;
 const TARGET_MAX_Y = 1900;
+
+// Distant terrain backdrop — fetched only if the GLB exists.
+const DISTANT_TERRAIN_URL = "/terrain/straja-distant.glb";
 
 // Snow is now baked into the satellite texture (see bake-terrain.py --snow),
 // so no runtime shader injection is needed.
@@ -41,23 +45,38 @@ export default function Scene({ terrainModelUrl, viewerData }: SceneProps) {
   return (
     <Canvas
       dpr={[1, 1.5]}
-      camera={{ position: DEFAULT_CAMERA_POS, fov: 45, near: 1, far: 40000 }}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
+      camera={{ position: DEFAULT_CAMERA_POS, fov: 45, near: 1, far: 50000 }}
+      gl={{
+        antialias: true,
+        powerPreference: "high-performance",
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1.18,
+      }}
       performance={{ min: 0.5 }}
       onPointerMissed={() => useViewerStore.getState().clearSelection()}
     >
-      {/* Sky dome — gradient sphere acting as atmospheric backdrop.
-          Fog colour matches the horizon stop so far terrain fades into sky. */}
-      <SkyDome zenith="#1a2740" horizon="#a8b5ca" ground="#1e2940" />
-      <fog attach="fog" args={["#a8b5ca", 5500, 18000]} />
+      {/* Sky dome — clear sunny winter day:
+           zenith vivid blue, horizon warm cream (golden-hour-ish without being dramatic). */}
+      <SkyDome zenith="#3a82d3" horizon="#fadeb6" ground="#2a3a52" />
+      {/* Fog acts as an "edge fader" — kicks in only at the very rim of the
+          distant terrain (~20 km from origin) and ramps fast so the cut into
+          empty sky reads as "the map ends" rather than a render boundary.
+          Most of the 40 km of surrounding terrain stays clear. */}
+      <fog attach="fog" args={["#f3dcb8", 19000, 24000]} />
 
-      <hemisphereLight args={["#cfd9e6", "#1a2030", 0.85]} />
-      <directionalLight position={[6000, 12000, 4000]} intensity={1.4} color="#fff2d6" />
-      <directionalLight position={[-4000, 5000, -3000]} intensity={0.3} color="#b6cae8" />
+      <hemisphereLight args={["#cfe2f6", "#262a30", 1.05]} />
+      {/* Warmer, brighter sun */}
+      <directionalLight position={[6000, 12000, 4000]} intensity={1.85} color="#fff4cf" />
+      <directionalLight position={[-4000, 5000, -3000]} intensity={0.35} color="#dbe7fb" />
 
       {terrainModelUrl ? (
         <Suspense fallback={<Mountain />}>
           <Terrain url={terrainModelUrl} />
+          {/* Lower-res surrounding terrain. Suspense gracefully waits for it
+              and its own ErrorBoundary keeps the viewer alive if the GLB is missing. */}
+          <Suspense fallback={null}>
+            <DistantTerrain url={DISTANT_TERRAIN_URL} />
+          </Suspense>
         </Suspense>
       ) : (
         <Mountain />
@@ -78,11 +97,12 @@ export default function Scene({ terrainModelUrl, viewerData }: SceneProps) {
         enableDamping
         dampingFactor={0.08}
         target={DEFAULT_TARGET}
-        // 14°–74° from up — more freedom than the hard-locked version, still no horizontal
         minPolarAngle={Math.PI * 0.08}
         maxPolarAngle={Math.PI * 0.41}
         minDistance={400}
-        maxDistance={12000}
+        // Tightened so the user stays focused on the resort and the distant
+        // low-res terrain is always at the horizon, never centre-stage.
+        maxDistance={6500}
       />
 
       <CameraBounds />
@@ -91,7 +111,7 @@ export default function Scene({ terrainModelUrl, viewerData }: SceneProps) {
   );
 }
 
-/** Terrain mesh + snow tint shader injection. */
+/** Main terrain mesh — the high-detail Straja model. */
 function Terrain({ url }: { url: string }) {
   const { scene } = useGLTF(url);
 
@@ -103,6 +123,30 @@ function Terrain({ url }: { url: string }) {
 
       if (mat.map) {
         mat.map.anisotropy = 16;
+        mat.map.needsUpdate = true;
+      }
+    });
+  }, [scene]);
+
+  return <primitive object={scene} />;
+}
+
+/**
+ * Low-detail surrounding terrain — a hole-punched ring around the main resort
+ * model (centre ±3 km is excluded in the bake). Fog dissolves far edges into
+ * the sky.
+ */
+function DistantTerrain({ url }: { url: string }) {
+  const { scene } = useGLTF(url);
+
+  useEffect(() => {
+    scene.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mat = obj.material as THREE.MeshStandardMaterial | undefined;
+      if (!mat) return;
+      // Cheaper sampling for the distant tiles — no anisotropy.
+      if (mat.map) {
+        mat.map.anisotropy = 4;
         mat.map.needsUpdate = true;
       }
     });

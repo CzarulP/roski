@@ -364,6 +364,9 @@ def main() -> int:
                    help="elevation (m) where snow starts (default 1150)")
     p.add_argument("--snow-full", type=float, default=1700.0,
                    help="elevation (m) at which snow is fully laid down (default 1700)")
+    p.add_argument("--exclude-center-m", type=float, default=0.0,
+                   help="drop faces whose centroid is within this half-extent of the origin "
+                        "(creates a ring; use to avoid overlapping a higher-res main terrain)")
     p.add_argument("--out", required=True, help="output .glb path")
     args = p.parse_args()
 
@@ -385,6 +388,19 @@ def main() -> int:
     lat_min, lat_max, lon_min, lon_max = bbox
     elev_range = (float(vertices[:, 1].min()), float(vertices[:, 1].max()))
     print(f"[mesh] {len(vertices)} verts, {len(faces)} tris, elev {elev_range[0]:.0f}..{elev_range[1]:.0f}m")
+
+    # Optional: drop faces whose centroid is inside a central exclusion box
+    # (so the bake becomes a ring around a higher-res terrain we render separately).
+    if args.exclude_center_m > 0:
+        v_xz = vertices[:, [0, 2]]  # local East / South
+        centroids = v_xz[faces].mean(axis=1)
+        in_center = (
+            (np.abs(centroids[:, 0]) < args.exclude_center_m)
+            & (np.abs(centroids[:, 1]) < args.exclude_center_m)
+        )
+        dropped = int(in_center.sum())
+        faces = faces[~in_center]
+        print(f"[mesh] hole-punched centre ±{args.exclude_center_m:.0f}m: -{dropped} tris -> {len(faces)} tris")
 
     # 3. Satellite drape
     composite, tile_bbox = fetch_satellite_image(
