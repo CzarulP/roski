@@ -20,8 +20,6 @@
 
 ## 2. User & Working Style (CRITICAL — read first)
 
-The user is **Theodor / Vasile Theodor** (`vasile.theodor908@gmail.com`).
-
 **Working style preferences** (these have been reinforced multiple times):
 - **Solo dev. Speed over process.** No PRs, no unit/integration tests, no staging environment, no microservices.
 - **Phased delivery.** Work one roadmap phase at a time, **stop at the end of each phase**, propose commit plan, wait for go-ahead before next phase.
