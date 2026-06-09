@@ -9,6 +9,7 @@ import Snow from "./Snow";
 import Slopes from "./Slopes";
 import Lifts from "./Lifts";
 import Labels from "./Labels";
+import SkyDome from "./SkyDome";
 import type { ViewerData } from "@/lib/api";
 import { useViewerStore } from "@/lib/viewer-store";
 
@@ -45,11 +46,13 @@ export default function Scene({ terrainModelUrl, viewerData }: SceneProps) {
       performance={{ min: 0.5 }}
       onPointerMissed={() => useViewerStore.getState().clearSelection()}
     >
-      <color attach="background" args={["#152339"]} />
-      <fog attach="fog" args={["#152339", 8000, 20000]} />
+      {/* Sky dome — gradient sphere acting as atmospheric backdrop.
+          Fog colour matches the horizon stop so far terrain fades into sky. */}
+      <SkyDome zenith="#1a2740" horizon="#a8b5ca" ground="#1e2940" />
+      <fog attach="fog" args={["#a8b5ca", 5500, 18000]} />
 
-      <hemisphereLight args={["#a8c2e3", "#1a2030", 0.7]} />
-      <directionalLight position={[6000, 12000, 4000]} intensity={1.6} color="#fff2d6" />
+      <hemisphereLight args={["#cfd9e6", "#1a2030", 0.85]} />
+      <directionalLight position={[6000, 12000, 4000]} intensity={1.4} color="#fff2d6" />
       <directionalLight position={[-4000, 5000, -3000]} intensity={0.3} color="#b6cae8" />
 
       {terrainModelUrl ? (

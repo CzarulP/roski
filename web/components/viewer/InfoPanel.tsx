@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { X, Mountain, Ruler, ArrowDownToLine, Clock, Users, CircleCheck, CircleSlash } from "lucide-react";
+import { X, Mountain, Ruler, ArrowDownToLine, Clock, Users, CircleCheck, CircleSlash, Ticket } from "lucide-react";
 import { useViewerStore } from "@/lib/viewer-store";
 import { DIFFICULTY, cn, describeLiftType, toSlug } from "@/lib/utils";
-import type { ViewerSlope, ViewerLift } from "@/lib/api";
+import type { ViewerSlope, ViewerLift, ExternalData } from "@/lib/api";
 
 /**
  * Floating side panel showing details of the currently-selected slope or lift.
  * Subscribes to the viewer store and slides in from the right.
+ *
+ * When external data (skipass) is provided, lift panels also show point
+ * consumption for that lift.
  */
-export default function InfoPanel() {
+export default function InfoPanel({ external }: { external?: ExternalData | null }) {
   const selection = useViewerStore((s) => s.selection);
   const close = useViewerStore((s) => s.clearSelection);
 
@@ -35,7 +38,7 @@ export default function InfoPanel() {
           {selection.type === "slope" ? (
             <SlopeContent slope={selection.data} />
           ) : (
-            <LiftContent lift={selection.data} />
+            <LiftContent lift={selection.data} external={external} />
           )}
           <PanelImage
             name={selection.data.name ?? ""}
@@ -91,12 +94,14 @@ function SlopeContent({ slope }: { slope: ViewerSlope }) {
   );
 }
 
-function LiftContent({ lift }: { lift: ViewerLift }) {
+function LiftContent({ lift, external }: { lift: ViewerLift; external?: ExternalData | null }) {
   const points = lift.points;
   const entryY = points[0]?.[1] ?? 0;
   const exitY = points[points.length - 1]?.[1] ?? 0;
   const top = Math.max(entryY, exitY);
   const bottom = Math.min(entryY, exitY);
+
+  const skipassInfo = external ? getLiftSkipassInfo(lift, external) : null;
 
   return (
     <div className="space-y-4">
@@ -131,8 +136,51 @@ function LiftContent({ lift }: { lift: ViewerLift }) {
           <Stat icon={<Clock className="w-4 h-4" />} label="Program" value={lift.hours} />
         )}
       </div>
+
+      {skipassInfo && (
+        <div className="rounded-lg border border-amber-300/30 bg-gradient-to-br from-amber-400/10 to-amber-600/5 p-3">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-amber-300 font-mono">
+            <Ticket className="w-3.5 h-3.5" />
+            Skipass pe puncte
+          </div>
+          <div className="mt-1.5 flex items-baseline justify-between">
+            <span className="text-2xl font-semibold tabular-nums">
+              {skipassInfo.points}
+              <span className="text-sm text-muted-foreground ml-1 font-normal">puncte / urcare</span>
+            </span>
+          </div>
+          <div className="mt-1 text-[11px] text-muted-foreground">{skipassInfo.passName}</div>
+        </div>
+      )}
     </div>
   );
+}
+
+/** Determine which skipass zone (Montana vs Platoul Soarelui) this lift falls in
+ *  and look up the point cost for its lift type. */
+function getLiftSkipassInfo(lift: ViewerLift, external: ExternalData):
+  { passName: string; points: number } | null
+{
+  const isPlatoul = (lift.name ?? "").toLowerCase().includes("platoul soarelui");
+  const passType = isPlatoul ? "points_platoul" : "points_montana";
+  const pass = external.skipass.passes.find((p) => p.type === passType);
+  if (!pass?.consumption) return null;
+
+  // Match the lift's category to a consumption key.
+  const lookup: Record<string, string[]> = {
+    gondola:    ["Telegondolă", "Telegondola"],
+    cable_car:  ["Telegondolă", "Telegondola"],
+    chair:      ["Telescaun"],
+    drag:       ["Teleschi"],
+  };
+  const candidates = lookup[lift.liftType] ?? [];
+  for (const key of candidates) {
+    const points = pass.consumption[key];
+    if (typeof points === "number") {
+      return { passName: pass.name, points };
+    }
+  }
+  return null;
 }
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {

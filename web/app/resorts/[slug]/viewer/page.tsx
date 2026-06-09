@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { endpoints } from "@/lib/api";
+import { endpoints, type ExternalData } from "@/lib/api";
 import ViewerCanvas from "@/components/viewer/ViewerCanvas";
 import { ArrowLeft } from "lucide-react";
 
@@ -8,6 +8,7 @@ export default async function ViewerPage({ params }: { params: Promise<{ slug: s
   const { slug } = await params;
 
   let resort, viewerData;
+  let external: ExternalData | null = null;
   try {
     resort = await endpoints.resort(slug);
   } catch {
@@ -17,6 +18,11 @@ export default async function ViewerPage({ params }: { params: Promise<{ slug: s
     viewerData = await endpoints.viewerData(slug);
   } catch {
     viewerData = null;
+  }
+  try {
+    external = await endpoints.external(slug);
+  } catch {
+    external = null;
   }
 
   return (
@@ -40,7 +46,11 @@ export default async function ViewerPage({ params }: { params: Promise<{ slug: s
       </div>
 
       {/* Full-bleed canvas */}
-      <ViewerCanvas terrainModelUrl={resort.terrainModelUrl} viewerData={viewerData} />
+      <ViewerCanvas
+        terrainModelUrl={resort.terrainModelUrl}
+        viewerData={viewerData}
+        external={external}
+      />
 
       {/* Phase note (will be removed when we ship) */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 text-xs text-muted-foreground bg-card/80 backdrop-blur border border-border rounded-full px-4 py-2">

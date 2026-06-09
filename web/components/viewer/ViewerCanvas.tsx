@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { ViewerData } from "@/lib/api";
+import type { ViewerData, ExternalData } from "@/lib/api";
 import InfoPanel from "./InfoPanel";
 import ResetButton from "./ResetButton";
 import Legend from "./Legend";
@@ -19,13 +19,14 @@ const Scene = dynamic(() => import("./Scene"), {
 type ViewerCanvasProps = {
   terrainModelUrl?: string | null;
   viewerData?: ViewerData | null;
+  external?: ExternalData | null;
 };
 
-export default function ViewerCanvas({ terrainModelUrl, viewerData }: ViewerCanvasProps) {
+export default function ViewerCanvas({ terrainModelUrl, viewerData, external }: ViewerCanvasProps) {
   return (
     <>
       <Scene terrainModelUrl={terrainModelUrl} viewerData={viewerData} />
-      <InfoPanel />
+      <InfoPanel external={external} />
       <Legend />
       <ResetButton />
     </>
